@@ -1,12 +1,14 @@
 import os
 import requests
 import base64
+import time
 import cv2
 import numpy as np
 from flask import Flask, request, send_from_directory
 from twilio.twiml.messaging_response import MessagingResponse
 from twilio.rest import Client
-from gradio_client import Client as GradioClient, file
+from gradio_client import Client as GradioClient,file
+#from gradio_client import file 
 import shutil
 from dotenv import load_dotenv
 
@@ -47,7 +49,9 @@ def webhook():
 
     # If no image is received, inform the user
     if media_url is None:
-        resp.message("We didn't receive an image. Please try sending your image again.")
+        resp.message("👋 Welcome to Virtual Try-On! 👗✨ Discover your perfect outfit and style like never before. Let's get started!")
+        resp.message("📸 Can you please upload your image by taking a selfie? 😊 Let's get started on your virtual try-on journey!")
+
         return str(resp)
 
     # Step 1: Check if person image is uploaded
@@ -55,19 +59,31 @@ def webhook():
         user_sessions[sender_number] = {}
         if media_url:
             user_sessions[sender_number]['person_image'] = media_url
-            resp.message("Great! Now please send the image of the garment you want to try on.")
+            resp.message("Great! Now please upload the image of the garment you want to try on.")
         else:
             resp.message("Please send your image to begin the virtual try-on process.")
     # Step 2: Check if garment image is uploaded
     elif 'person_image' in user_sessions[sender_number] and 'garment_image' not in user_sessions[sender_number]:
         if media_url:
             user_sessions[sender_number]['garment_image'] = media_url
+            
             # Now both images are collected, send them to the Gradio API for virtual try-on
             try_on_image_url = send_to_gradio(user_sessions[sender_number]['person_image'], media_url)
+            
             if try_on_image_url:
                 # Send the image as a WhatsApp media message
                 send_media_message(sender_number, try_on_image_url)
-                resp.message("Here is your virtual try-on result!")
+                
+                send_personalized_message(sender_number)
+                personalized_message(sender_number)
+                personalized_message1(sender_number)
+                
+                resp.message("Here is your virtual try-on fit!")
+                resp.message("Would you like to see more options in this style? 🤔 Let us know what you're looking for, and we'll send you more options!")
+                resp.message("Exclusive offer just for you! 💎 Get 20% off if you grab this look in the next 30 minutes. 🏃‍♀️💨")
+                
+                
+                #resp.message("Wow! 😍 This outfit really looks great on you! 👗✨ If you want more looks like this, check out our latest collections! 🎉🛍️ We have stylish options just for you! 🧡 Don't miss out on the latest trends! 🔥")
             else:
                 resp.message("Sorry, something went wrong with the try-on process.")
             # Clear session after completion
@@ -79,6 +95,42 @@ def webhook():
         resp.message("Please send your image to begin the virtual try-on process.")
 
     return str(resp)
+    
+def send_personalized_message(sender_number):
+    # Personalize the message based on the result
+    message = "Wow! 😍 This outfit really looks great on you! 👗✨ If you want more looks like this, check out our latest collections! 🎉🛍️ We have stylish options just for you! 🧡 Don't miss out on the latest trends! 🔥"
+    
+    # Send the personalized message via Twilio
+    client.messages.create(
+        from_='whatsapp:+14155238886',  # Twilio sandbox number
+        body=message,
+        to=sender_number
+    )
+    print(f"Sent personalized message to {sender_number}: {message}")
+
+def personalized_message(sender_number):
+    # Personalize the message based on the result
+    message = "Would you like to see more options in this style? 🤔 Let us know what you're looking for, and we'll send you more options!"
+    
+    # Send the personalized message via Twilio
+    client.messages.create(
+        from_='whatsapp:+14155238886',  # Twilio sandbox number
+        body=message,
+        to=sender_number
+    )
+    print(f"Sent personalized message to {sender_number}: {message}")
+
+def personalized_message1(sender_number):
+    # Personalize the message based on the result
+    message = "Exclusive offer just for you! 💎 Get 20% off if you grab this look in the next 30 minutes. 🏃‍♀️💨"
+    
+    # Send the personalized message via Twilio
+    client.messages.create(
+        from_='whatsapp:+14155238886',  # Twilio sandbox number
+        body=message,
+        to=sender_number
+    )
+    print(f"Sent personalized message to {sender_number}: {message}")
 
 # Function to interact with the Gradio API
 def send_to_gradio(person_image_url, garment_image_url):
@@ -99,7 +151,7 @@ def send_to_gradio(person_image_url, garment_image_url):
             is_checked=True,
             is_checked_crop=False,
             denoise_steps=30,
-            seed=42,
+            seed=30,
             api_name="/tryon"
         )
 
@@ -196,4 +248,4 @@ def serve_static_file(filename):
         return "File not found", 404
 
 if __name__ == '__main__':
-    app.run(port=8080)
+    app.run(port=3000)
